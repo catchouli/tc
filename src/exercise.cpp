@@ -19,28 +19,36 @@ public:
   // If !( keyBegin < keyEnd ), this designates an empty interval,
   // and assign must do nothing.
   void assign(K const& keyBegin, K const& keyEnd, V const& val) {
+
+    // If !(keyBegin < keyEnd), assign should do nothing
     if (!(keyBegin < keyEnd))
       return;
+
+    // Store the end value to reinsert it at the end of the range
     const V endVal = (*this)[keyEnd];
-    auto eraseStart = m_map.lower_bound(keyBegin);
-    auto eraseEnd = m_map.upper_bound(keyEnd);
-    if (eraseStart == m_map.begin())
-      eraseStart++;
-    m_map.erase(eraseStart, eraseEnd);
-    if (!((*this)[keyBegin] == val)) {
-      auto it = m_map.find(keyBegin);
-      if (it != m_map.end())
-        it->second = val;
-      else
-        m_map.insert(std::make_pair(keyBegin, val));
+
+    // Erase values in the range
+    auto beginIt = m_map.lower_bound(keyBegin);
+    auto endIt = m_map.lower_bound(keyEnd);
+
+    // If the value at keyBegin isn't already the right value, insert it
+    if (beginIt == m_map.end() || m_map.key_comp()(keyBegin, beginIt->first)) {
+      beginIt = m_map.insert(beginIt, std::make_pair(keyBegin, val));
     }
-    if (!((*this)[keyEnd] == endVal)) {
-      auto it = m_map.find(keyEnd);
-      if (it != m_map.end())
-        it->second = endVal;
-      else
-        m_map.insert(std::make_pair(keyEnd, endVal));
+    else {
+      beginIt->second = val;
     }
+
+    // If the value at keyEnd isn't already the right value, insert it
+    if (endIt == m_map.end() || m_map.key_comp()(keyEnd, endIt->first)) {
+      endIt = m_map.insert(endIt, std::make_pair(keyEnd, endVal));
+    }
+    else {
+      endIt->second = endVal;
+    }
+
+    if (++beginIt != endIt)
+      m_map.erase(beginIt, endIt);
   }
 
   // look-up of the value associated with key
@@ -112,6 +120,11 @@ auto checkCanonicity = [](const interval_map<Key,Val>& m) {
   }
 };
 
+auto checkSize = [](const interval_map<Key, Val>& m, size_t size) {
+  INFO("check map size");
+  TEST_MACRO(m.map().size() == size);
+};
+
 TEST_CASE("interval_map") {
   SECTION("Key type") {
     TEST_MACRO(Key(4) < Key(5));
@@ -146,7 +159,7 @@ TEST_CASE("interval_map") {
     TEST_MACRO(m[key] == Val(5));
     TEST_MACRO_FALSE(m[key] == Val(6));
 
-    TEST_MACRO(m.map().size() == 1);
+    checkSize(m, 1);
     checkCanonicity(m);
   }
 
@@ -163,7 +176,7 @@ TEST_CASE("interval_map") {
     TEST_MACRO(m[Key(6)] == 'A');
     TEST_MACRO(m[Key(7)] == 'A');
 
-    TEST_MACRO(m.map().size() == 3);
+    checkSize(m, 3);
     checkCanonicity(m);
   }
 
@@ -196,7 +209,7 @@ TEST_CASE("interval_map") {
       TEST_MACRO(m[Key(99)] == Val('b'));
       TEST_MACRO(m[Key(100)] == Val('a'));
 
-      TEST_MACRO(m.map().size() == 3);
+      checkSize(m, 3);
       checkCanonicity(m);
 
       SECTION("updating a key range that already exists") {
@@ -212,10 +225,10 @@ TEST_CASE("interval_map") {
       }
 
       SECTION("assigning a range that matches the key of the existing range") {
-        TEST_MACRO(m.map().size() == 3);
+        checkSize(m, 3);
         checkCanonicity(m);
         m.assign(Key(1000), Key(2000), Val('a'));
-        TEST_MACRO(m.map().size() == 3);
+        checkSize(m, 3);
         checkCanonicity(m);
       }
 
@@ -236,7 +249,7 @@ TEST_CASE("interval_map") {
         TEST_MACRO(m[Key(10)] == Val('b'));
         TEST_MACRO(m[Key(11)] == Val('b'));
 
-        TEST_MACRO(m.map().size() == 5);
+        checkSize(m, 5);
         checkCanonicity(m);
       }
 
@@ -257,7 +270,7 @@ TEST_CASE("interval_map") {
         TEST_MACRO(m[Key(10)] == Val('b'));
         TEST_MACRO(m[Key(11)] == Val('b'));
 
-        TEST_MACRO(m.map().size() == 4);
+        checkSize(m, 4);
         checkCanonicity(m);
       }
 
@@ -459,7 +472,7 @@ TEST_CASE("interval_map") {
         }
         TEST_MACRO(m[Key(min.val() + 5)] == Val('a'));
 
-        TEST_MACRO(m.map().size() == 3);
+        checkSize(m, 3);
         checkCanonicity(m);
 
         // Overwrite min
@@ -482,7 +495,7 @@ TEST_CASE("interval_map") {
         }
         TEST_MACRO(m[Key(min.val() + 5)] == Val('a'));
 
-        TEST_MACRO(m.map().size() == 4);
+        checkSize(m, 4);
         checkCanonicity(m);
 
         SECTION("restore the map to the original state with the same operation but the original value") {
@@ -504,7 +517,7 @@ TEST_CASE("interval_map") {
           }
           TEST_MACRO(m[Key(min.val() + 5)] == Val('a'));
 
-          TEST_MACRO(m.map().size() == 3);
+          checkSize(m, 3);
           checkCanonicity(m);
         }
 
@@ -527,7 +540,7 @@ TEST_CASE("interval_map") {
           }
           TEST_MACRO(m[Key(min.val() + 5)] == Val('a'));
 
-          TEST_MACRO(m.map().size() == 3);
+          checkSize(m, 3);
           checkCanonicity(m);
         }
 
@@ -551,7 +564,7 @@ TEST_CASE("interval_map") {
           TEST_MACRO(m[Key(min.val() + 4)] == Val('c'));
           TEST_MACRO(m[Key(min.val() + 5)] == Val('a'));
 
-          TEST_MACRO(m.map().size() == 5);
+          checkSize(m, 5);
           checkCanonicity(m);
         }
       }
@@ -572,7 +585,7 @@ TEST_CASE("interval_map") {
           TEST_MACRO(m[Key(i)] == Val('a'));
         }
 
-        TEST_MACRO(m.map().size() == 3);
+        checkSize(m, 3);
         checkCanonicity(m);
 
         // Overwrite max
@@ -593,7 +606,7 @@ TEST_CASE("interval_map") {
           TEST_MACRO(m[Key(i)] == Val('c'));
         }
 
-        TEST_MACRO(m.map().size() == 5);
+        checkSize(m, 5);
         checkCanonicity(m);
 
         // Try and restore old map state
@@ -614,7 +627,7 @@ TEST_CASE("interval_map") {
           TEST_MACRO(m[Key(i)] == Val('a'));
         }
 
-        TEST_MACRO(m.map().size() == 3);
+        checkSize(m, 3);
         checkCanonicity(m);
       }
     }
