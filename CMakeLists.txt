@@ -5,6 +5,8 @@ project(think-cell LANGUAGES CXX)
 macro(enableCXX17 proj)
   if (MSVC_VERSION GREATER_EQUAL "1900")
     target_compile_options(${proj} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std:c++latest>)
+  else()
+    target_compile_options(${proj} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>)
   endif()
 endmacro(enableCXX17)
 
