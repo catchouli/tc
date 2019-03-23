@@ -22,9 +22,25 @@ public:
     if (!(keyBegin < keyEnd))
       return;
     const V endVal = (*this)[keyEnd];
-    m_map.erase(m_map.lower_bound(keyBegin), m_map.upper_bound(keyEnd));
-    m_map.insert(std::make_pair(keyBegin, val));
-    m_map.insert(std::make_pair(keyEnd, endVal));
+    auto eraseStart = m_map.lower_bound(keyBegin);
+    auto eraseEnd = m_map.upper_bound(keyEnd);
+    if (eraseStart == m_map.begin())
+      eraseStart++;
+    m_map.erase(eraseStart, eraseEnd);
+    if (!((*this)[keyBegin] == val)) {
+      auto it = m_map.find(keyBegin);
+      if (it != m_map.end())
+        it->second = val;
+      else
+        m_map.insert(std::make_pair(keyBegin, val));
+    }
+    if (!((*this)[keyEnd] == endVal)) {
+      auto it = m_map.find(keyEnd);
+      if (it != m_map.end())
+        it->second = endVal;
+      else
+        m_map.insert(std::make_pair(keyEnd, endVal));
+    }
   }
 
   // look-up of the value associated with key
