@@ -169,7 +169,7 @@ TEST_CASE("interval_map") {
 
   SECTION("interval_map with the initial range (min, max) -> 'a'") {
     interval_map<Key, Val> m(Val('a'));
-
+  
     SECTION("with the additional range (10, 100) -> 'b'") {
       const Key min = std::numeric_limits<Key>::lowest();
       const Key max = std::numeric_limits<Key>::max();
@@ -199,7 +199,19 @@ TEST_CASE("interval_map") {
       TEST_MACRO(m.map().size() == 3);
       checkCanonicity(m);
 
-      SECTION("Assigning a range that matches the value of the existing range") {
+      SECTION("updating a key range that already exists") {
+        m.assign(Key(10), Key(100), Val('c'));
+
+        TEST_MACRO(m[min] == Val('a'));
+        TEST_MACRO(m[Key(9)] == Val('a'));
+        TEST_MACRO(m[Key(10)] == Val('c'));
+        TEST_MACRO(m[Key(11)] == Val('c'));
+        TEST_MACRO(m[Key(99)] == Val('c'));
+        TEST_MACRO(m[Key(100)] == Val('a'));
+        TEST_MACRO(m[max] == Val('a'));
+      }
+
+      SECTION("assigning a range that matches the key of the existing range") {
         TEST_MACRO(m.map().size() == 3);
         checkCanonicity(m);
         m.assign(Key(1000), Key(2000), Val('a'));
